@@ -27,23 +27,12 @@ def upload_and_process(request):
 
             image_urls = {}
 
-            # ✅ Variable-wise colormaps
-            colormaps = {
-                "t2": "plasma",       # Temperature
-                "rainc": "Blues",     # Rainfall (cumulus)
-                "rainnc": "YlGnBu",   # Rainfall (non-cumulus)
-                "rh2": "YlGnBu",      # Humidity
-                "u10m": "RdBu",       # East-West Wind
-                "v10m": "PiYG"        # North-South Wind
-            }
-
             for var in ds.data_vars:
                 try:
                     data = ds[var].isel(time=0) if "time" in ds[var].dims else ds[var]
-                    cmap = colormaps.get(var.lower(), "viridis")  # fallback cmap
 
                     plt.figure(figsize=(8, 6))
-                    data.plot(cmap=cmap)
+                    data.plot(cmap="viridis")
                     plt.title(var)
 
                     image_filename = f"{uuid.uuid4()}.png"
