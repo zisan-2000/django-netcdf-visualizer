@@ -88,10 +88,14 @@ def upload_and_generate_csv(request):
             for var in ds.data_vars:
                 try:
                     data = ds[var]
-                    df = data.to_dataframe().reset_index()  # dimensions সহ ডেটা
+                    df = data.to_dataframe().reset_index()
+
                     csv_filename = f"{uuid.uuid4()}.csv"
                     csv_path = os.path.join(csv_output_dir, csv_filename)
-                    df.to_csv(csv_path, index=False)
+
+                    with open(csv_path, 'w') as f:
+                        df.to_csv(f, index=False, chunksize=50000)  # ✅ CHUNKSIZE added
+
                     csv_urls[var] = f"{settings.MEDIA_URL}csvs/{csv_filename}"
                 except Exception as e:
                     print(f"Skipping {var}: {e}")
