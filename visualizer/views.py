@@ -7,6 +7,9 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
+import pandas as pd
+
+
 @csrf_exempt
 def upload_and_process(request):
     if request.method == "POST" and request.FILES.get("file"):
@@ -58,6 +61,42 @@ def upload_and_process(request):
 
             return JsonResponse({"images": image_urls})
 
+        except Exception as e:
+            return JsonResponse({"error": f"Failed to process file: {str(e)}"}, status=500)
+
+    return JsonResponse({"error": "No file uploaded"}, status=400)
+
+
+@csrf_exempt
+def upload_and_generate_csv(request):
+    if request.method == "POST" and request.FILES.get("file"):
+        file = request.FILES["file"]
+        filename = f"{uuid.uuid4()}.nc"
+        filepath = os.path.join(settings.MEDIA_ROOT, filename)
+
+        with open(filepath, "wb") as f:
+            for chunk in file.chunks():
+                f.write(chunk)
+
+        try:
+            ds = xr.open_dataset(filepath)
+            csv_output_dir = os.path.join(settings.MEDIA_ROOT, "csvs")
+            os.makedirs(csv_output_dir, exist_ok=True)
+
+            csv_urls = {}
+
+            for var in ds.data_vars:
+                try:
+                    data = ds[var]
+                    df = data.to_dataframe().reset_index()  # dimensions সহ ডেটা
+                    csv_filename = f"{uuid.uuid4()}.csv"
+                    csv_path = os.path.join(csv_output_dir, csv_filename)
+                    df.to_csv(csv_path, index=False)
+                    csv_urls[var] = f"{settings.MEDIA_URL}csvs/{csv_filename}"
+                except Exception as e:
+                    print(f"Skipping {var}: {e}")
+
+            return JsonResponse({"csvs": csv_urls})
         except Exception as e:
             return JsonResponse({"error": f"Failed to process file: {str(e)}"}, status=500)
 

@@ -12,3 +12,5 @@ venv/
 # VSCode/OS files
 .vscode/
 .DS_Store
+
+media/
