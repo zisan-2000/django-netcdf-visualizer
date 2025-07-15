@@ -8,6 +8,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
 import pandas as pd
+import dask.dataframe as dd
+
 
 
 @csrf_exempt
@@ -79,7 +81,7 @@ def upload_and_generate_csv(request):
                 f.write(chunk)
 
         try:
-            ds = xr.open_dataset(filepath)
+            ds = xr.open_dataset(filepath, chunks={})  # chunked for dask
             csv_output_dir = os.path.join(settings.MEDIA_ROOT, "csvs")
             os.makedirs(csv_output_dir, exist_ok=True)
 
@@ -88,13 +90,12 @@ def upload_and_generate_csv(request):
             for var in ds.data_vars:
                 try:
                     data = ds[var]
-                    df = data.to_dataframe().reset_index()
+                    ddf = data.to_dask_dataframe()
 
                     csv_filename = f"{uuid.uuid4()}.csv"
                     csv_path = os.path.join(csv_output_dir, csv_filename)
 
-                    with open(csv_path, 'w') as f:
-                        df.to_csv(f, index=False, chunksize=50000)  # ✅ CHUNKSIZE added
+                    ddf.to_csv(csv_path, single_file=True, index=False)
 
                     csv_urls[var] = f"{settings.MEDIA_URL}csvs/{csv_filename}"
                 except Exception as e:
